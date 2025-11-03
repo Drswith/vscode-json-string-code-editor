@@ -1,0 +1,7 @@
+{
+  "script": "function test() { return 'hello world'; }",
+  "code": "const x = 42; console.log(x);",
+  "query": "SELECT * FROM users WHERE id = 1",
+  "template": "<div>Hello {{name}}</div>",
+  "regularString": "This is just a regular string"
+}

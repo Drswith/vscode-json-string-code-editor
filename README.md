@@ -59,17 +59,6 @@ code --install-extension drswith.vscode-json-string-code-editor
 }
 ```
 
-### Auto-Detection
-
-The extension automatically detects code in fields with these names by default:
-
-- `adaptor`
-- `script`
-- `code`
-- `expression`
-
-You can customize these field names in the extension settings.
-
 ### Language Detection
 
 The extension automatically detects the programming language based on field names and content analysis. The following languages are supported (built-in, not customizable):
@@ -122,13 +111,12 @@ Access settings via `File > Preferences > Settings` and search for "JSON String 
 
 <!-- configs -->
 
-| Key                                                  | Description                                                          | Type      | Default                                             |
-| ---------------------------------------------------- | -------------------------------------------------------------------- | --------- | --------------------------------------------------- |
-| `vscode-json-string-code-editor.include`             | Glob patterns for files where the extension should be active         | `array`   | `["**/*.json","**/*.jsonc"]`                        |
-| `vscode-json-string-code-editor.exclude`             | Glob patterns for files that should be excluded from processing      | `array`   | `["**/node_modules/**","**/dist/**","**/build/**"]` |
-| `vscode-json-string-code-editor.enableAutoDetection` | Automatically detect code in JSON strings                            | `boolean` | `true`                                              |
-| `vscode-json-string-code-editor.autoDetectFields`    | Field names that should be automatically detected as containing code | `array`   | `["adaptor","script","code","expression"]`          |
-| `vscode-json-string-code-editor.logLevel`            | Set the logging level for the extension                              | `string`  | `"info"`                                            |
+| Key                                              | Description                                                     | Type     | Default                                             |
+| ------------------------------------------------ | --------------------------------------------------------------- | -------- | --------------------------------------------------- |
+| `vscode-json-string-code-editor.include`         | Glob patterns for files where the extension should be active    | `array`  | `["**/*.json","**/*.jsonc"]`                        |
+| `vscode-json-string-code-editor.exclude`         | Glob patterns for files that should be excluded from processing | `array`  | `["**/node_modules/**","**/dist/**","**/build/**"]` |
+| `vscode-json-string-code-editor.recentLanguages` | Recently used programming languages for code editing            | `array`  | `[]`                                                |
+| `vscode-json-string-code-editor.logLevel`        | Set the logging level for the extension                         | `string` | `"info"`                                            |
 
 <!-- configs -->
 
@@ -136,14 +124,6 @@ Access settings via `File > Preferences > Settings` and search for "JSON String 
 
 ```json
 {
-  "vscode-json-string-code-editor.autoDetectFields": [
-    "adaptor",
-    "script",
-    "code",
-    "expression",
-    "handler",
-    "transform"
-  ],
   "vscode-json-string-code-editor.include": [
     "**/*.json",
     "**/*.jsonc",
@@ -212,8 +192,6 @@ pnpm run ext:pack
 
 **Extension not detecting code fields**
 
-- Check that the field name is included in `autoDetectFields` setting
-- Ensure `enableAutoDetection` is set to `true`
 - Verify the file matches the `include` patterns and doesn't match `exclude` patterns
 
 **Temporary editor not opening**
@@ -231,8 +209,6 @@ pnpm run ext:pack
 **Performance issues with large files**
 
 - Use the `exclude` setting to skip large directories like `node_modules`
-- Consider disabling auto-detection for very large JSON files
-- Use the manual "Edit Code in Temporary Editor" command instead of auto-detection
 
 ### Getting Help
 

@@ -1,10 +1,9 @@
 {
   "basic_code_snippets": {
-    "javascript_simple": "function hello() { console.log('Hello World'); }",
-    "javascript_multiline": "function complex() {\n  const data = {\n    name: 'test',\n    value: 42\n  };\n  return data;\n}",
+    "javascript_simple": "function hello() { console.log('Hello World！！！'); }",
+    "javascript_multiline": "function complex() {\n  const data = {\n    name: 'tests',\n    value: 42\n  };\n  return data;\n}",
     "javascript_with_escape": "function escaped() {\n  const str = 'Hello\\nWorld';\n  const regex = /\\d+/g;\n  return str.replace(regex, '');\n}"
   },
-  
   "multi_language_snippets": {
     "python_script": "def hello():\n    print('Hello World')\n    return True",
     "sql_query": "SELECT u.name, u.email\nFROM users u\nWHERE u.active = 1\nORDER BY u.created_at DESC",
@@ -21,7 +20,6 @@
     "typescript_code": "interface User {\n    name: string;\n    age: number;\n    email?: string;\n}\n\nclass UserService {\n    private users: User[] = [];\n    \n    addUser(user: User): void {\n        this.users.push(user);\n    }\n}",
     "markdown_content": "# Project Documentation\n\n## Overview\n\nThis is a **comprehensive** example with:\n\n- *Italic text*\n- `inline code`\n- [Links](https://example.com)\n\n```javascript\nconst example = 'code block';\n```"
   },
-  
   "array_code_snippets": {
     "script_array": [
       "function first() { return 1; }",
@@ -36,7 +34,6 @@
       true
     ]
   },
-  
   "nested_object_code": {
     "level_1": {
       "level_2": {
@@ -145,12 +142,10 @@
       }
     }
   },
-  
   "complex_business_logic": {
     "data_processor": "try {\n  let result = payload.data.items.map(el => {\n    return {\n      label: el.merchantName + ' - ' + el.merchantNo,\n      value: el.merchantNo,\n      metadata: {\n        createdAt: new Date().toISOString(),\n        isActive: el.status === 'active'\n      }\n    }\n  });\n  \n  return {\n    ...payload,\n    data: {\n      items: result,\n      total: result.length,\n      processed: true\n    }\n  };\n} catch (e) {\n  console.error('Processing failed:', e);\n  return {\n    ...payload,\n    error: e.message,\n    processed: false\n  };\n}",
     "async_handler": "async function processData(input) {\n  try {\n    const response = await fetch('/api/data', {\n      method: 'POST',\n      headers: {\n        'Content-Type': 'application/json',\n        'Authorization': `Bearer ${token}`\n      },\n      body: JSON.stringify(input)\n    });\n    \n    if (!response.ok) {\n      throw new Error(`HTTP ${response.status}: ${response.statusText}`);\n    }\n    \n    const data = await response.json();\n    return data;\n  } catch (error) {\n    console.error('API call failed:', error);\n    throw error;\n  }\n}"
   },
-  
   "non_code_values": {
     "number_value": 42,
     "boolean_value": true,
@@ -161,10 +156,20 @@
     "email": "user@example.com",
     "date_string": "2024-01-15T10:30:00Z",
     "json_string": "{\"name\": \"test\", \"value\": 123}",
-    "numbers_array": [1, 2, 3, 4, 5],
-    "mixed_simple_array": ["text", 42, true, null]
+    "numbers_array": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "mixed_simple_array": [
+      "text",
+      42,
+      true,
+      null
+    ]
   },
-  
   "edge_cases_and_special_chars": {
     "empty_function": "function empty() {}",
     "single_line_comment": "// This is a comment",
@@ -175,7 +180,6 @@
     "template_literal": "const message = `Hello, ${name}!\\nWelcome to ${place}`;",
     "very_long_line": "function veryLongFunctionNameThatExceedsNormalLineLengthLimitsAndContinuesForAVeryLongTimeToTestHowTheEditorHandlesLongLines() { return 'This is a very long line that might cause issues with some editors or formatters if not handled properly'; }"
   },
-  
   "legacy_examples": {
     "adaptor": "try { \n const adaptor = require('./adaptor'); } catch (error) { console.error('Error loading adaptor:', error); }\n",
     "code": "const adaptor = require('./adaptor');\n",

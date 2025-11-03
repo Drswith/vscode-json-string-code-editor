@@ -1,27 +1,35 @@
+import * as os from 'node:os'
 import * as vscode from 'vscode'
 import { CodeDetector } from './codeDetector'
 import { CodeEditorProvider } from './codeEditorProvider'
-import { DecorationProvider } from './decorationProvider'
 import { shouldProcessFile } from './fileUtils'
+import { LanguageSelector } from './languageSelector'
 import { logger } from './logger'
 import { getTempDirectoryUri } from './tempUtils'
 
 export function activate(context: vscode.ExtensionContext) {
-  logger.info('JSON String Code Editor extension is now active!')
+  logger.info('JSON String Code Editor extension is being activated')
 
   const detector = new CodeDetector()
-  detector.updateConfiguration() // 初始化配置
 
   // 监听配置变化
   const configChangeListener = vscode.workspace.onDidChangeConfiguration((e: vscode.ConfigurationChangeEvent) => {
     if (e.affectsConfiguration('vscode-json-string-code-editor')) {
-      detector.updateConfiguration()
       logger.onConfigurationChanged()
     }
   })
 
-  const editorProvider = new CodeEditorProvider(context)
-  const decorationProvider = new DecorationProvider(detector)
+  const editorProvider = new CodeEditorProvider()
+
+  // 监听文档保存事件，用于同步临时文件更改到原始JSON文件
+  const saveListener = vscode.workspace.onDidSaveTextDocument(async (document) => {
+    // 检查是否是临时文件
+    if (document.uri.fsPath.includes('vscode-json-string-code-editor')
+      && document.uri.fsPath.includes(os.tmpdir())) {
+      logger.info(`Temporary file saved: ${document.uri.fsPath}`)
+      await editorProvider.saveCodeToOriginal(document)
+    }
+  })
 
   // 注册命令：编辑代码
   const editCodeCommand = vscode.commands.registerCommand(
@@ -37,58 +45,40 @@ export function activate(context: vscode.ExtensionContext) {
       const selection = editor.selection
       const position = selection.active
 
-      // 检查是否启用了自动检测
-      const config = vscode.workspace.getConfiguration('vscode-json-string-code-editor')
-      const enableAutoDetection = config.get('enableAutoDetection', true)
-      if (!enableAutoDetection) {
-        vscode.window.showInformationMessage('自动检测功能已禁用，请在设置中启用 enableAutoDetection')
+      // 检测当前位置是否包含代码
+      const codeInfo = await detector.detectCodeAtPosition(document, position)
+      if (!codeInfo) {
+        logger.info('No code detected at current position')
+        vscode.window.showInformationMessage('当前位置未检测到代码字符串')
         return
       }
 
-      // 检测当前位置是否包含代码
-      const codeInfo = detector.detectCodeAtPosition(document, position)
-      if (!codeInfo) {
-        logger.info('No code detected at current position')
+      // 检查是否已存在该键值的编辑器
+      const hasExisting = editorProvider.hasExistingEditor(document.uri.fsPath, codeInfo.keyPath)
+      if (hasExisting) {
+        logger.info('Existing editor found, reusing without language selection')
+        // 直接复用已存在的编辑器，不需要语言选择
+        await editorProvider.openCodeEditor(codeInfo, document)
         return
+      }
+
+      // 显示语言选择菜单，传递字段名和代码内容用于自动检测
+      const selectedLanguage = await LanguageSelector.showLanguageSelector(codeInfo.fieldName, codeInfo.code)
+      if (!selectedLanguage) {
+        logger.info('User cancelled language selection')
+        return
+      }
+
+      logger.info(`User selected language: ${selectedLanguage}`)
+
+      // 创建带有语言信息的代码块信息
+      const codeInfoWithLanguage = {
+        ...codeInfo,
+        language: selectedLanguage,
       }
 
       // 打开临时编辑器
-      await editorProvider.openCodeEditor(codeInfo, document, editor)
-    },
-  )
-
-  // 注册代码镜头提供器
-  const codeLensProvider = vscode.languages.registerCodeLensProvider(
-    ['json', 'jsonc'],
-    {
-      provideCodeLenses(document: vscode.TextDocument): vscode.CodeLens[] {
-        // 检查是否启用了自动检测
-        const config = vscode.workspace.getConfiguration('vscode-json-string-code-editor')
-        const enableAutoDetection = config.get('enableAutoDetection', true)
-        if (!enableAutoDetection) {
-          return []
-        }
-
-        const codeLenses: vscode.CodeLens[] = []
-        const codeBlocks = detector.detectAllCodeBlocks(document)
-
-        for (const block of codeBlocks) {
-          const range = new vscode.Range(
-            document.positionAt(block.start),
-            document.positionAt(block.end),
-          )
-
-          const codeLens = new vscode.CodeLens(range, {
-            title: `✏️ Edit ${block.language.charAt(0).toUpperCase() + block.language.slice(1)}`,
-            command: 'vscode-json-string-code-editor.editCodeAtRange',
-            arguments: [document.uri.toString(), block],
-          })
-
-          codeLenses.push(codeLens)
-        }
-
-        return codeLenses
-      },
+      await editorProvider.openCodeEditor(codeInfoWithLanguage, document)
     },
   )
 
@@ -106,16 +96,8 @@ export function activate(context: vscode.ExtensionContext) {
         return
       }
 
-      // 检查是否启用了自动检测
-      const config = vscode.workspace.getConfiguration('vscode-json-string-code-editor')
-      const enableAutoDetection = config.get('enableAutoDetection', true)
-      if (!enableAutoDetection) {
-        vscode.window.showInformationMessage('自动检测功能已禁用，请在设置中启用 enableAutoDetection')
-        return
-      }
-
       // blockInfo 已经是 CodeBlockInfo 格式，直接使用
-      await editorProvider.openCodeEditor(blockInfo, editor.document, editor)
+      await editorProvider.openCodeEditor(blockInfo, editor.document)
     },
   )
 
@@ -179,38 +161,12 @@ export function activate(context: vscode.ExtensionContext) {
     }
   }
 
-  // 注册点击处理器
-  const clickHandler = vscode.window.onDidChangeTextEditorSelection(async (event) => {
-    const editor = event.textEditor
-    if (!editor || !shouldProcessFile(editor.document)) {
-      return
-    }
-
-    // 检查是否点击了代码
-    const selection = event.selections[0]
-    if (selection && selection.isEmpty) {
-      const position = selection.active
-      const codeInfo = detector.detectCodeAtPosition(editor.document, position)
-
-      if (codeInfo) {
-        // 检查是否是单击（而不是拖拽选择）
-        const timeSinceLastClick = Date.now() - (clickHandler as any).lastClickTime || 0
-        if (timeSinceLastClick > 100) { // 防止重复触发
-          (clickHandler as any).lastClickTime = Date.now()
-          await editorProvider.openCodeEditor(codeInfo, editor.document, editor)
-        }
-      }
-    }
-  })
-
   context.subscriptions.push(
     editCodeCommand,
     editCodeAtRangeCommand,
     cleanupTempFilesCommand,
-    codeLensProvider,
-    decorationProvider,
-    clickHandler,
     configChangeListener,
+    saveListener,
   )
 }
 

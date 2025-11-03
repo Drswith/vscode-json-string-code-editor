@@ -2,33 +2,33 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { CodeDetector } from '../src/codeDetector'
 import { Position, TextDocument, workspace, Uri } from 'vscode'
 
-describe('right click JavaScript detection', () => {
+describe('right click code detection', () => {
   let detector: CodeDetector
 
   beforeEach(() => {
     detector = new CodeDetector()
   })
 
-  it('should detect JavaScript at cursor position', async () => {
+  it('should detect code at cursor position in string field', async () => {
     const uri = Uri.joinPath(Uri.file(process.cwd()), 'examples/test-right-click.json')
     const document = await workspace.openTextDocument(uri)
 
-    // Position cursor inside the JavaScript string
+    // Position cursor inside the string field
     const position = new Position(2, 20) // Inside the script field
-    const result = detector.detectCodeAtPosition(document, position)
+    const result = await detector.detectCodeAtPosition(document, position)
 
     expect(result).not.toBeNull()
     expect(result?.code).toBe('console.log(\'Hello World\');')
     expect(result?.fieldName).toBe('script')
   })
 
-  it('should return null when cursor is not in JavaScript code', async () => {
+  it('should return null when cursor is not in a string field', async () => {
     const uri = Uri.joinPath(Uri.file(process.cwd()), 'examples/test-right-click.json')
     const document = await workspace.openTextDocument(uri)
 
-    // Position cursor outside JavaScript code
+    // Position cursor outside string content
     const position = new Position(0, 5) // In the field name
-    const result = detector.detectCodeAtPosition(document, position)
+    const result = await detector.detectCodeAtPosition(document, position)
 
     expect(result).toBeNull()
   })
@@ -37,34 +37,36 @@ describe('right click JavaScript detection', () => {
     const uri = Uri.joinPath(Uri.file(process.cwd()), 'examples/test-right-click-nested.json')
     const document = await workspace.openTextDocument(uri)
 
-    // Position cursor inside nested JavaScript
+    // Position cursor inside nested string
     const position = new Position(2, 30)
-    const result = detector.detectCodeAtPosition(document, position)
+    const result = await detector.detectCodeAtPosition(document, position)
 
     expect(result).not.toBeNull()
     expect(result?.fieldName).toBe('adaptor')
   })
 
-  it('should handle array elements with JavaScript', async () => {
+  it('should handle array elements with string content', async () => {
     const uri = Uri.joinPath(Uri.file(process.cwd()), 'examples/test-right-click-array.json')
     const document = await workspace.openTextDocument(uri)
 
     const position = new Position(2, 25)
-    const result = detector.detectCodeAtPosition(document, position)
+    const result = await detector.detectCodeAtPosition(document, position)
 
     expect(result).not.toBeNull()
     expect(result?.fieldName).toBe('adaptor')
   })
 
-  it('should return null for non-JavaScript fields', async () => {
+  it('should detect any string field content', async () => {
     const uri = Uri.joinPath(Uri.file(process.cwd()), 'examples/test-right-click-non-js.json')
     const document = await workspace.openTextDocument(uri)
 
-    // Position cursor in a regular string field (other field)
-    const position = new Position(2, 15)
-    const result = detector.detectCodeAtPosition(document, position)
+    // Position cursor in the "other" field string content
+    const position = new Position(2, 12) // Inside the "other" field value "normal text"
+    const result = await detector.detectCodeAtPosition(document, position)
 
-    expect(result).toBeNull()
+    // Now we detect any string content, not just code
+    expect(result).not.toBeNull()
+    expect(result?.fieldName).toBe('other')
   })
 
   it('should handle malformed JSON gracefully', async () => {
@@ -73,31 +75,31 @@ describe('right click JavaScript detection', () => {
 
     // Position cursor in malformed JSON
     const position = new Position(1, 20)
-    const result = detector.detectCodeAtPosition(document, position)
+    const result = await detector.detectCodeAtPosition(document, position)
 
-    // Should still detect JavaScript even in malformed JSON
+    // Should still detect string content even in malformed JSON
     expect(result).not.toBeNull()
     expect(result?.fieldName).toBe('adaptor')
   })
 
-  it('should detect JavaScript in adaptor field', async () => {
+  it('should detect content in adaptor field', async () => {
     const uri = Uri.joinPath(Uri.file(process.cwd()), 'examples/test-right-click-adaptor.json')
     const document = await workspace.openTextDocument(uri)
 
     const position = new Position(1, 30)
-    const result = detector.detectCodeAtPosition(document, position)
+    const result = await detector.detectCodeAtPosition(document, position)
 
     expect(result).not.toBeNull()
     expect(result?.fieldName).toBe('adaptor')
     expect(result?.code).toBe('function test() { return \'hello\'; }')
   })
 
-  it('should detect JavaScript in script field', async () => {
+  it('should detect content in script field', async () => {
     const uri = Uri.joinPath(Uri.file(process.cwd()), 'examples/test-right-click-script.json')
     const document = await workspace.openTextDocument(uri)
 
     const position = new Position(1, 25)
-    const result = detector.detectCodeAtPosition(document, position)
+    const result = await detector.detectCodeAtPosition(document, position)
 
     expect(result).not.toBeNull()
     expect(result?.fieldName).toBe('script')
