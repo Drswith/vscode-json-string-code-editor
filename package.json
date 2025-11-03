@@ -93,20 +93,13 @@
           ],
           "description": "Glob patterns for files that should be excluded from processing"
         },
-        "vscode-json-string-code-editor.enableAutoDetection": {
-          "type": "boolean",
-          "default": true,
-          "description": "Automatically detect code in JSON strings"
-        },
-        "vscode-json-string-code-editor.autoDetectFields": {
+        "vscode-json-string-code-editor.recentLanguages": {
           "type": "array",
-          "default": [
-            "adaptor",
-            "script",
-            "code",
-            "expression"
-          ],
-          "description": "Field names that should be automatically detected as containing code"
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "Recently used programming languages for code editing"
         },
         "vscode-json-string-code-editor.logLevel": {
           "type": "string",
