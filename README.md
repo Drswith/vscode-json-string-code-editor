@@ -17,7 +17,7 @@ A powerful VS Code extension that enhances the editing experience of code snippe
 ## ✨ Features
 
 - **🚀 Temporary Code Editor**: Open code strings in dedicated temporary editor tabs with full language support
-- **🎯 Smart Detection**: Automatically detects code in JSON string fields like `adaptor`, `script`, `code`, `expression`
+- **🎯 Smart Detection**: Automatically detects and recommends the most appropriate programming language based on field names and code content analysis
 - **🌈 Syntax Highlighting**: Full syntax highlighting and IntelliSense for multiple programming languages
 - **🔧 Right-click Integration**: Easy access through context menu in JSON/JSONC files
 - **⚡ Real-time Sync**: Changes in temporary editors are automatically synced back to the original JSON
@@ -46,8 +46,9 @@ code --install-extension drswith.vscode-json-string-code-editor
 1. **Open a JSON or JSONC file** containing code strings
 2. **Right-click** on a string value that contains code
 3. **Select "Edit Code in Temporary Editor"** from the context menu
-4. **Edit your code** in the new temporary tab with full language support
-5. **Save the temporary file** (Ctrl+S) to sync changes back to the original JSON
+4. **Choose a language** from the automatically detected recommendations (or select manually from the full list)
+5. **Edit your code** in the new temporary tab with full language support
+6. **Save the temporary file** (Ctrl+S) to sync changes back to the original JSON
 
 ### Example JSON Structure
 
@@ -68,20 +69,30 @@ The extension automatically detects the programming language based on field name
 - **JavaScript** (default fallback)
 - **TypeScript**
 - **Python**
-- **SQL**
-- **HTML**
-- **CSS**
 - **Java**
-- **PHP**
-- **Shell/Bash**
-- **JSON**
+- **C#**
+- **C**
+- **C++**
 - **Go**
 - **Rust**
-- **C/C++**
+- **PHP**
+- **Ruby**
+- **Swift**
+- **Kotlin**
+- **Scala**
+- **HTML**
+- **CSS**
+- **SCSS**
+- **Less**
+- **SQL**
+- **JSON**
 - **XML**
 - **YAML**
 - **Markdown**
+- **Shell Script**
+- **PowerShell**
 - **Dockerfile**
+- **Plain Text**
 
 **Detection Logic:**
 
@@ -111,12 +122,11 @@ Access settings via `File > Preferences > Settings` and search for "JSON String 
 
 <!-- configs -->
 
-| Key                                              | Description                                                     | Type     | Default                                             |
-| ------------------------------------------------ | --------------------------------------------------------------- | -------- | --------------------------------------------------- |
-| `vscode-json-string-code-editor.include`         | Glob patterns for files where the extension should be active    | `array`  | `["**/*.json","**/*.jsonc"]`                        |
-| `vscode-json-string-code-editor.exclude`         | Glob patterns for files that should be excluded from processing | `array`  | `["**/node_modules/**","**/dist/**","**/build/**"]` |
-| `vscode-json-string-code-editor.recentLanguages` | Recently used programming languages for code editing            | `array`  | `[]`                                                |
-| `vscode-json-string-code-editor.logLevel`        | Set the logging level for the extension                         | `string` | `"info"`                                            |
+| Key                                       | Description                                                     | Type     | Default                                             |
+| ----------------------------------------- | --------------------------------------------------------------- | -------- | --------------------------------------------------- |
+| `vscode-json-string-code-editor.include`  | Glob patterns for files where the extension should be active    | `array`  | `["**/*.json","**/*.jsonc"]`                        |
+| `vscode-json-string-code-editor.exclude`  | Glob patterns for files that should be excluded from processing | `array`  | `["**/node_modules/**","**/dist/**","**/build/**"]` |
+| `vscode-json-string-code-editor.logLevel` | Set the logging level for the extension                         | `string` | `"info"`                                            |
 
 <!-- configs -->
 
