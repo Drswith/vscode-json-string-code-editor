@@ -72,10 +72,10 @@ export class Logger {
     const levelStr = LogLevel[level]
     const logMessage = `[${timestamp}] [${levelStr}] ${message}`
 
-    // 1. 输出到 Output Channel
+    // 1. Output to Output Channel
     this.outputChannel.appendLine(logMessage)
 
-    // 2. 输出到 Console
+    // 2. Output to Console
     switch (level) {
       case LogLevel.ERROR:
         console.error(logMessage)
@@ -128,11 +128,11 @@ export class Logger {
     this.outputChannel.dispose()
   }
 
-  // 监听配置变化
+  // Listen for configuration changes
   public onConfigurationChanged(): void {
     this.updateLogLevel()
   }
 }
 
-// 导出单例实例
+// Export singleton instance
 export const logger = Logger.getInstance()

@@ -9,13 +9,13 @@ export interface CodeBlockInfo {
   end: number
   range: vscode.Range
   fieldName: string
-  keyPath: string // 完整的 JSON 键名路径，如 "config.database.script"
-  language?: string // 可选的语言标识符
+  keyPath: string // Complete JSON key path, e.g. "config.database.script"
+  language?: string // Optional language identifier
 }
 
 export class CodeDetector {
   constructor() {
-    // 移除了配置相关的初始化
+    // Removed configuration-related initialization
   }
 
   async detectCodeAtPosition(document: vscode.TextDocument, position: vscode.Position): Promise<CodeBlockInfo | null> {
@@ -23,7 +23,7 @@ export class CodeDetector {
     const offset = document.offsetAt(position)
 
     try {
-      // 使用jsonc-parser解析JSON，支持注释和容错
+      // Use jsonc-parser to parse JSON, supports comments and fault tolerance
       const parseErrors: ParseError[] = []
       const parsed = parseTree(text, parseErrors, {
         allowTrailingComma: true,
@@ -35,7 +35,7 @@ export class CodeDetector {
         return await this.findCodeInObjectWithAST(text, offset, document)
       }
 
-      // 如果解析失败，尝试部分解析
+      // If parsing fails, try partial parsing
       return await this.findCodeInPartialJson(text, offset, document)
     }
     catch (error) {
@@ -47,29 +47,29 @@ export class CodeDetector {
   private async findCodeInObjectWithAST(text: string, offset: number, document: vscode.TextDocument): Promise<CodeBlockInfo | null> {
     let result: CodeBlockInfo | null = null
     let currentProperty: string | null = null
-    const pathStack: string[] = [] // 用于追踪 JSON 路径
+    const pathStack: string[] = [] // Used to track JSON path
     const pendingDetections: Array<{ fieldName: string, value: string, valueOffset: number, valueLength: number, fullPath: string }> = []
 
     const visitor: JSONVisitor = {
       onObjectBegin: () => {
-        // 进入对象时重置
+        // Reset when entering object
       },
       onObjectProperty: (property: string) => {
         currentProperty = property
         pathStack.push(property)
       },
       onObjectEnd: () => {
-        // 退出对象时弹出路径栈
+        // Pop path stack when exiting object
         if (pathStack.length > 0) {
           pathStack.pop()
         }
         currentProperty = null
       },
       onArrayBegin: () => {
-        // 进入数组
+        // Enter array
       },
       onArrayEnd: () => {
-        // 退出数组时清理路径栈中的数组索引
+        // Clean up array indices in path stack when exiting array
         while (pathStack.length > 0 && pathStack[pathStack.length - 1].startsWith('[')) {
           pathStack.pop()
         }
@@ -90,7 +90,7 @@ export class CodeDetector {
 
     visit(text, visitor)
 
-    // 检查哪个检测到的代码块包含目标偏移量
+    // Check which detected code block contains the target offset
     for (const detection of pendingDetections) {
       const { fieldName, value, valueOffset, valueLength, fullPath } = detection
 
@@ -117,7 +117,7 @@ export class CodeDetector {
   }
 
   private async findCodeInPartialJson(text: string, offset: number, document: vscode.TextDocument): Promise<CodeBlockInfo | null> {
-    // 使用正则表达式查找字符串值
+    // Use regular expression to find string values
     const stringRegex = /"(?:[^"\\]|\\.)*"/g
     let match: RegExpExecArray | null
 
@@ -126,9 +126,9 @@ export class CodeDetector {
       const matchStart = match.index
       const matchEnd = matchStart + match[0].length
 
-      // 检查偏移量是否在这个字符串内
+      // Check if offset is within this string
       if (offset >= matchStart && offset <= matchEnd) {
-        // 尝试找到字段名
+        // Try to find field name
         const beforeString = text.substring(0, matchStart)
         const fieldMatch = beforeString.match(/"([^"]+)"\s*:\s*$/)
 
@@ -136,7 +136,7 @@ export class CodeDetector {
           const fieldName = fieldMatch[1]
 
           if (this.isCodeField(fieldName)) {
-            const stringValue = match[0].slice(1, -1) // 移除引号
+            const stringValue = match[0].slice(1, -1) // Remove quotes
             const unescapedCode = this.unescapeString(stringValue)
             const range = new vscode.Range(
               document.positionAt(matchStart),
@@ -160,7 +160,7 @@ export class CodeDetector {
   }
 
   private isCodeField(_fieldName: string): boolean {
-    // 现在支持所有字符串字段，因为用户可以选择语言
+    // Now supports all string fields because users can select language
     return true
   }
 
@@ -176,7 +176,7 @@ export class CodeDetector {
         case 'r': return '\r'
         case 't': return '\t'
         case 'u': {
-          // 处理Unicode转义序列 \uXXXX
+          // Handle Unicode escape sequences \uXXXX
           const nextFour = str.substr(str.indexOf(match) + 2, 4)
           if (/^[0-9a-f]{4}$/i.test(nextFour)) {
             return String.fromCharCode(Number.parseInt(nextFour, 16))
@@ -184,7 +184,7 @@ export class CodeDetector {
           return char
         }
         case 'x': {
-          // 处理十六进制转义序列 \xXX
+          // Handle hexadecimal escape sequences \xXX
           const nextTwo = str.substr(str.indexOf(match) + 2, 2)
           if (/^[0-9a-f]{2}$/i.test(nextTwo)) {
             return String.fromCharCode(Number.parseInt(nextTwo, 16))
@@ -192,7 +192,7 @@ export class CodeDetector {
           return char
         }
         case '0': case '1': case '2': case '3': case '4': case '5': case '6': case '7': {
-          // 处理八进制转义序列 \ooo
+          // Handle octal escape sequences \ooo
           const octal = match.substr(1)
           if (/^[0-7]{1,3}$/.test(octal)) {
             return String.fromCharCode(Number.parseInt(octal, 8))

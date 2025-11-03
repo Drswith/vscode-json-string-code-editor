@@ -15,30 +15,30 @@ interface LanguageDetectionResult {
 
 export class LanguageSelector {
   /**
-   * 显示增强的语言选择器
-   * 包含图标、搜索和自动检测推荐功能
-   * @param fieldName 字段名，用于语言检测
-   * @param codeContent 代码内容，用于语言检测
-   * @returns 选择的语言ID，如果用户取消则返回undefined
+   * Show enhanced language selector
+   * Includes icons, search and auto-detection recommendation features
+   * @param fieldName Field name for language detection
+   * @param codeContent Code content for language detection
+   * @returns Selected language ID, returns undefined if user cancels
    */
   public static async showLanguageSelector(fieldName?: string, codeContent?: string): Promise<string | undefined> {
-    // 获取所有已知的语言
+    // Get all known languages
     const languages = await vscode.languages.getLanguages()
 
-    // 获取语言信息
+    // Get language information
     const languageInfos = languages.map(id => this.getLanguageInfo(id))
 
-    // 进行语言自动检测
+    // Perform automatic language detection
     let recommendedLanguage: string | undefined
     if (fieldName || codeContent) {
       recommendedLanguage = await this.detectLanguage(fieldName, codeContent)
     }
 
-    // 创建快速选择项
+    // Create quick pick items
     const quickPickItems = this.createQuickPickItems(languageInfos, recommendedLanguage)
 
     const selected = await vscode.window.showQuickPick(quickPickItems, {
-      placeHolder: '选择代码语言',
+      placeHolder: 'Select code language',
       matchOnDescription: true,
       matchOnDetail: true,
       ignoreFocusOut: false,
@@ -46,7 +46,7 @@ export class LanguageSelector {
     })
 
     if (selected && !selected.kind) {
-      // 从label中提取语言ID（括号中的内容）
+      // Extract language ID from label (content in parentheses)
       const match = selected.label.match(/\(([^)]+)\)$/)
       const languageId = match ? match[1] : undefined
 
@@ -59,27 +59,27 @@ export class LanguageSelector {
   }
 
   /**
-   * 自动检测语言
-   * 使用并行检测多种语言，返回最先匹配到的语言
+   * Auto-detect language
+   * Use parallel detection for multiple languages, return the first matched language
    */
   private static async detectLanguage(fieldName?: string, codeContent?: string): Promise<string | undefined> {
     const detectionPromises: Promise<LanguageDetectionResult | null>[] = []
 
-    // 基于字段名的检测
+    // Field name based detection
     if (fieldName) {
       detectionPromises.push(this.detectLanguageFromFieldName(fieldName))
     }
 
-    // 基于代码内容的检测
+    // Code content based detection
     if (codeContent) {
       detectionPromises.push(this.detectLanguageFromContent(codeContent))
     }
 
     try {
-      // 使用 Promise.race 获取最先完成的检测结果
+      // Use Promise.race to get the first completed detection result
       const results = await Promise.allSettled(detectionPromises)
 
-      // 找到第一个成功的检测结果
+      // Find the first successful detection result
       for (const result of results) {
         if (result.status === 'fulfilled' && result.value) {
           return result.value.languageId
@@ -94,12 +94,12 @@ export class LanguageSelector {
   }
 
   /**
-   * 基于字段名检测语言
+   * Detect language based on field name
    */
   private static async detectLanguageFromFieldName(fieldName: string): Promise<LanguageDetectionResult | null> {
     const fieldNameLower = fieldName.toLowerCase()
 
-    // 字段名模式匹配
+    // Field name pattern matching
     const patterns: Record<string, string[]> = {
       javascript: ['js', 'javascript', 'script', 'node', 'react', 'vue'],
       typescript: ['ts', 'typescript'],
@@ -140,7 +140,7 @@ export class LanguageSelector {
   }
 
   /**
-   * 基于代码内容检测语言
+   * Detect language from content
    */
   private static async detectLanguageFromContent(codeContent: string): Promise<LanguageDetectionResult | null> {
     const content = codeContent.trim()
@@ -149,7 +149,7 @@ export class LanguageSelector {
       return null
     }
 
-    // 内容模式匹配
+    // Content pattern matching
     const patterns: Array<{ regex: RegExp, languageId: string, confidence: number }> = [
       // JavaScript/TypeScript
       { regex: /\b(function|const|let|var|=>|console\.log|require|import|export)\b/, languageId: 'javascript', confidence: 0.9 },
@@ -184,7 +184,7 @@ export class LanguageSelector {
       // HTML
       { regex: /<\/?[a-z][\s\S]*>/i, languageId: 'html', confidence: 0.9 },
 
-      // CSS - 简化正则表达式避免回溯问题
+      // CSS - Simplified regex to avoid backtracking issues
       { regex: /@media|@import|@keyframes|color\s*:|background\s*:|margin\s*:|padding\s*:/, languageId: 'css', confidence: 0.9 },
 
       // SQL
@@ -207,7 +207,7 @@ export class LanguageSelector {
       { regex: /^(FROM|RUN|COPY|ADD|WORKDIR|EXPOSE|CMD|ENTRYPOINT)\b/m, languageId: 'dockerfile', confidence: 0.95 },
     ]
 
-    // 按置信度排序，优先返回高置信度的结果
+    // Sort by confidence, prioritize high confidence results
     const sortedPatterns = patterns.sort((a, b) => b.confidence - a.confidence)
 
     for (const pattern of sortedPatterns) {
@@ -220,45 +220,45 @@ export class LanguageSelector {
   }
 
   /**
-   * 创建快速选择项
+   * Create quick pick items
    */
   private static createQuickPickItems(languageInfos: LanguageInfo[], recommendedLanguage?: string): vscode.QuickPickItem[] {
     const items: vscode.QuickPickItem[] = []
 
-    // 如果有推荐语言，添加推荐部分
+    // If there's a recommended language, add the recommendation section
     if (recommendedLanguage) {
       const recommendedInfo = languageInfos.find(info => info.id === recommendedLanguage)
       if (recommendedInfo) {
         items.push({
-          label: '🎯 推荐语言',
+          label: '🎯 Recommended Language',
           kind: vscode.QuickPickItemKind.Separator,
         })
 
         items.push({
           label: `${recommendedInfo.displayName} (${recommendedInfo.id})`,
-          description: `${recommendedInfo.aliases.length > 0 ? recommendedInfo.aliases.join(', ') : ''} - 自动检测推荐`,
+          description: `${recommendedInfo.aliases.length > 0 ? recommendedInfo.aliases.join(', ') : ''} - Auto-detected recommendation`,
         })
 
-        // 添加分隔符
+        // Add separator
         items.push({
-          label: '所有语言',
+          label: 'All Languages',
           kind: vscode.QuickPickItemKind.Separator,
         })
       }
     }
 
-    // 按流行度和名称排序所有语言
+    // Sort all languages by popularity and name
     const sortedLanguages = languageInfos.sort((a, b) => {
-      // 先按流行度排序，再按名称排序
+      // Sort by popularity first, then by name
       if (a.popularity !== b.popularity) {
         return b.popularity - a.popularity
       }
       return a.displayName.localeCompare(b.displayName)
     })
 
-    // 添加所有语言（排除已经在推荐中的语言）
+    // Add all languages (excluding those already in recommendations)
     sortedLanguages.forEach((info) => {
-      // 如果这个语言不是推荐语言，或者没有推荐语言，则添加
+      // Add if this language is not the recommended one, or if there's no recommended language
       if (!recommendedLanguage || info.id !== recommendedLanguage) {
         items.push({
           label: `${info.displayName} (${info.id})`,
@@ -271,7 +271,7 @@ export class LanguageSelector {
   }
 
   /**
-   * 获取语言信息
+   * Get language information
    */
   private static getLanguageInfo(languageId: string): LanguageInfo {
     const displayName = this.getLanguageDisplayName(languageId)
@@ -289,11 +289,11 @@ export class LanguageSelector {
   }
 
   /**
-   * 获取语言图标
+   * Get language icon
    */
   private static getLanguageIcon(languageId: string): string {
     const icons: Record<string, string> = {
-      // 热门编程语言
+      // Popular programming languages
       javascript: '🟨',
       typescript: '🔷',
       python: '🐍',
@@ -309,7 +309,7 @@ export class LanguageSelector {
       kotlin: '🎯',
       scala: '🎭',
 
-      // Web 技术
+      // Web technologies
       html: '🌐',
       css: '🎨',
       scss: '💅',
@@ -319,7 +319,7 @@ export class LanguageSelector {
       react: '⚛️',
       angular: '🅰️',
 
-      // 标记和数据格式
+      // Markup and data formats
       markdown: '📝',
       json: '📋',
       jsonc: '📋',
@@ -329,7 +329,7 @@ export class LanguageSelector {
       ini: '⚙️',
       properties: '🔧',
 
-      // 脚本和配置
+      // Scripts and configuration
       shellscript: '🐚',
       bash: '🐚',
       powershell: '💙',
@@ -337,10 +337,10 @@ export class LanguageSelector {
       makefile: '🔨',
       bat: '🖥️',
 
-      // 数据库和查询
+      // Database and query
       sql: '🗃️',
 
-      // 其他
+      // Others
       plaintext: '📄',
       log: '📜',
       gitignore: '🚫',
@@ -350,7 +350,7 @@ export class LanguageSelector {
   }
 
   /**
-   * 获取语言别名（用于搜索）
+   * Get language aliases (for search)
    */
   private static getLanguageAliases(languageId: string): string[] {
     const aliases: Record<string, string[]> = {
@@ -388,11 +388,11 @@ export class LanguageSelector {
   }
 
   /**
-   * 获取语言流行度（用于排序）
+   * Get language popularity (for sorting)
    */
   private static getLanguagePopularity(languageId: string): number {
     const popularity: Record<string, number> = {
-      // 最热门的语言
+      // Most popular languages
       javascript: 100,
       typescript: 95,
       python: 90,
@@ -400,14 +400,14 @@ export class LanguageSelector {
       html: 80,
       css: 75,
 
-      // 常用语言
+      // Common languages
       json: 70,
       markdown: 65,
       sql: 60,
       shellscript: 55,
       yaml: 50,
 
-      // 编程语言
+      // Programming languages
       csharp: 45,
       cpp: 40,
       go: 35,
@@ -418,7 +418,7 @@ export class LanguageSelector {
       kotlin: 10,
       scala: 5,
 
-      // 其他
+      // Others
       xml: 3,
       dockerfile: 2,
       powershell: 1,
@@ -428,8 +428,8 @@ export class LanguageSelector {
   }
 
   /**
-   * 获取语言的友好显示名称
-   * 将语言ID转换为更易读的名称
+   * Get the friendly display name of a language
+   * Convert language ID to a more readable name
    */
   private static getLanguageDisplayName(languageId: string): string {
     const displayNames: Record<string, string> = {
@@ -474,7 +474,7 @@ export class LanguageSelector {
   }
 
   /**
-   * 检查语言ID是否有效
+   * Check if language ID is valid
    */
   public static async isValidLanguage(languageId: string): Promise<boolean> {
     const languages = await vscode.languages.getLanguages()

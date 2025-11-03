@@ -3,8 +3,8 @@ import * as path from 'node:path'
 import * as vscode from 'vscode'
 
 /**
- * 获取扩展专用的临时目录路径
- * @returns 临时目录的 URI
+ * Get extension-specific temporary directory path
+ * @returns Temporary directory URI
  */
 export function getTempDirectoryUri(): vscode.Uri {
   const systemTmpDir = os.tmpdir()
@@ -13,7 +13,7 @@ export function getTempDirectoryUri(): vscode.Uri {
 }
 
 /**
- * 确保临时目录存在
+ * Ensure temporary directory exists
  * @returns Promise<void>
  */
 export async function ensureTempDirectoryExists(): Promise<void> {

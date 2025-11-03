@@ -3,32 +3,32 @@ import { globbySync, isGitIgnoredSync } from 'globby'
 import * as vscode from 'vscode'
 
 /**
- * 获取默认的 include 模式，包括基本的 JSON 文件和 package.json
- * @returns 默认的 include 模式数组
+ * Get default include patterns, including basic JSON files and package.json
+ * @returns Default include pattern array
  */
 function getDefaultIncludePatterns(): string[] {
   return ['**/*.json', '**/*.jsonc', '**/package.json']
 }
 
 /**
- * 检查文件是否匹配include配置的模式
- * @param document 要检查的文档
- * @returns 如果文件匹配include模式则返回true，否则返回false
+ * Check if file matches include configuration patterns
+ * @param document Document to check
+ * @returns Returns true if file matches include patterns, otherwise false
  */
 export function isFileIncluded(document: vscode.TextDocument): boolean {
   const config = vscode.workspace.getConfiguration('vscode-json-string-code-editor')
   const defaultPatterns = getDefaultIncludePatterns()
   const includePatterns: string[] = config.get('include', defaultPatterns)
 
-  // 如果没有配置include模式，默认包含所有文件
+  // If no include patterns are configured, include all files by default
   if (!includePatterns || includePatterns.length === 0) {
     return true
   }
 
-  // 获取工作区文件夹
+  // Get workspace folder
   const workspaceFolder = vscode.workspace.getWorkspaceFolder(document.uri)
   if (!workspaceFolder) {
-    // 如果没有工作区，使用VS Code内置的匹配功能
+    // If no workspace, use VS Code built-in matching functionality
     return includePatterns.some((pattern) => {
       try {
         const documentSelector: vscode.DocumentSelector = { pattern }
@@ -42,23 +42,23 @@ export function isFileIncluded(document: vscode.TextDocument): boolean {
   }
 
   try {
-    // 获取文件相对于工作区的路径
+    // Get file path relative to workspace
     const relativePath = path.relative(workspaceFolder.uri.fsPath, document.uri.fsPath)
 
-    // 使用 globby 进行模式匹配，同时考虑 .gitignore 文件
+    // Use globby for pattern matching, also considering .gitignore files
     const matchedFiles = globbySync(includePatterns, {
       cwd: workspaceFolder.uri.fsPath,
-      gitignore: true, // 自动读取和应用 .gitignore 规则
+      gitignore: true, // Automatically read and apply .gitignore rules
       absolute: false,
       onlyFiles: true,
     })
 
-    // 检查当前文件是否在匹配的文件列表中
+    // Check if current file is in the matched file list
     return matchedFiles.includes(relativePath) || matchedFiles.includes(relativePath.replace(/\\/g, '/'))
   }
   catch (error) {
     console.warn('Error matching include patterns with globby:', error)
-    // 如果 globby 失败，回退到 VS Code 内置匹配
+    // If globby fails, fallback to VS Code built-in matching
     return includePatterns.some((pattern) => {
       try {
         const documentSelector: vscode.DocumentSelector = {
@@ -75,23 +75,23 @@ export function isFileIncluded(document: vscode.TextDocument): boolean {
 }
 
 /**
- * 检查文件是否匹配exclude配置的模式
- * @param document 要检查的文档
- * @returns 如果文件匹配exclude模式则返回true，否则返回false
+ * Check if file matches exclude configuration patterns
+ * @param document Document to check
+ * @returns Returns true if file matches exclude patterns, otherwise false
  */
 export function isFileExcluded(document: vscode.TextDocument): boolean {
   const config = vscode.workspace.getConfiguration('vscode-json-string-code-editor')
   const excludePatterns: string[] = config.get('exclude', ['**/node_modules/**', '**/dist/**', '**/build/**'])
 
-  // 如果没有配置exclude模式，不排除任何文件
+  // If no exclude patterns are configured, don't exclude any files
   if (!excludePatterns || excludePatterns.length === 0) {
     return false
   }
 
-  // 获取工作区文件夹
+  // Get workspace folder
   const workspaceFolder = vscode.workspace.getWorkspaceFolder(document.uri)
   if (!workspaceFolder) {
-    // 如果没有工作区，使用VS Code内置的匹配功能
+    // If no workspace, use VS Code built-in matching functionality
     return excludePatterns.some((pattern) => {
       try {
         const documentSelector: vscode.DocumentSelector = { pattern }
@@ -105,22 +105,22 @@ export function isFileExcluded(document: vscode.TextDocument): boolean {
   }
 
   try {
-    // 获取文件相对于工作区的路径
+    // Get file path relative to workspace
     const relativePath = path.relative(workspaceFolder.uri.fsPath, document.uri.fsPath)
 
-    // 使用 globby 进行模式匹配
+    // Use globby for pattern matching
     const matchedFiles = globbySync(excludePatterns, {
       cwd: workspaceFolder.uri.fsPath,
       absolute: false,
       onlyFiles: true,
     })
 
-    // 检查当前文件是否在匹配的文件列表中
+    // Check if current file is in the matched file list
     return matchedFiles.includes(relativePath) || matchedFiles.includes(relativePath.replace(/\\/g, '/'))
   }
   catch (error) {
     console.warn('Error matching exclude patterns with globby:', error)
-    // 如果 globby 失败，回退到 VS Code 内置匹配
+    // If globby fails, fallback to VS Code built-in matching
     return excludePatterns.some((pattern) => {
       try {
         const documentSelector: vscode.DocumentSelector = {
@@ -137,9 +137,9 @@ export function isFileExcluded(document: vscode.TextDocument): boolean {
 }
 
 /**
- * 检查文件是否被 .gitignore 忽略
- * @param document 要检查的文档
- * @returns 如果文件被 .gitignore 忽略则返回true，否则返回false
+ * Check if file is ignored by .gitignore
+ * @param document Document to check
+ * @returns Returns true if file is ignored by .gitignore, otherwise false
  */
 export function isFileGitIgnored(document: vscode.TextDocument): boolean {
   const workspaceFolder = vscode.workspace.getWorkspaceFolder(document.uri)
@@ -148,7 +148,7 @@ export function isFileGitIgnored(document: vscode.TextDocument): boolean {
   }
 
   try {
-    // 使用 globby 的 isGitIgnoredSync 函数检查文件是否被 .gitignore 忽略
+    // Use globby's isGitIgnoredSync function to check if file is ignored by .gitignore
     const isIgnored = isGitIgnoredSync({ cwd: workspaceFolder.uri.fsPath })
     const relativePath = path.relative(workspaceFolder.uri.fsPath, document.uri.fsPath)
     return isIgnored(relativePath)
@@ -160,29 +160,29 @@ export function isFileGitIgnored(document: vscode.TextDocument): boolean {
 }
 
 /**
- * 检查文件是否应该被扩展处理
- * 同时检查文件类型、include配置、exclude配置和 .gitignore 状态
- * @param document 要检查的文档
- * @returns 如果文件应该被处理则返回true，否则返回false
+ * Check if file should be processed by the extension
+ * Check file type, include configuration, exclude configuration and .gitignore status
+ * @param document Document to check
+ * @returns Returns true if file should be processed, otherwise false
  */
 export function shouldProcessFile(document: vscode.TextDocument): boolean {
-  // 首先检查文件类型
+  // First check file type
   if (document.languageId !== 'json' && document.languageId !== 'jsonc') {
     return false
   }
 
-  // 检查exclude配置（如果文件被排除，则不处理）
+  // Check exclude configuration (if file is excluded, don't process)
   if (isFileExcluded(document)) {
     return false
   }
 
-  // 检查include配置
+  // Check include configuration
   if (!isFileIncluded(document)) {
     return false
   }
 
-  // 注意：我们不在这里检查 .gitignore 状态，因为 isFileIncluded 中的 globby
-  // 已经通过 gitignore: true 选项自动处理了 .gitignore 规则
+  // Note: We don't check .gitignore status here because globby in isFileIncluded
+  // already handles .gitignore rules automatically through the gitignore: true option
 
   return true
 }

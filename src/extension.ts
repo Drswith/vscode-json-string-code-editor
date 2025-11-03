@@ -12,7 +12,7 @@ export function activate(context: vscode.ExtensionContext) {
 
   const detector = new CodeDetector()
 
-  // 监听配置变化
+  // Listen for configuration changes
   const configChangeListener = vscode.workspace.onDidChangeConfiguration((e: vscode.ConfigurationChangeEvent) => {
     if (e.affectsConfiguration('vscode-json-string-code-editor')) {
       logger.onConfigurationChanged()
@@ -21,9 +21,9 @@ export function activate(context: vscode.ExtensionContext) {
 
   const editorProvider = new CodeEditorProvider()
 
-  // 监听文档保存事件，用于同步临时文件更改到原始JSON文件
+  // Listen for document save events to sync temporary file changes to original JSON file
   const saveListener = vscode.workspace.onDidSaveTextDocument(async (document) => {
-    // 检查是否是临时文件
+    // Check if it's a temporary file
     if (document.uri.fsPath.includes('vscode-json-string-code-editor')
       && document.uri.fsPath.includes(os.tmpdir())) {
       logger.info(`Temporary file saved: ${document.uri.fsPath}`)
@@ -31,7 +31,7 @@ export function activate(context: vscode.ExtensionContext) {
     }
   })
 
-  // 注册命令：编辑代码
+  // Register command: edit code
   const editCodeCommand = vscode.commands.registerCommand(
     'vscode-json-string-code-editor.editCode',
     async () => {
@@ -45,24 +45,24 @@ export function activate(context: vscode.ExtensionContext) {
       const selection = editor.selection
       const position = selection.active
 
-      // 检测当前位置是否包含代码
+      // Detect if current position contains code
       const codeInfo = await detector.detectCodeAtPosition(document, position)
       if (!codeInfo) {
         logger.info('No code detected at current position')
-        vscode.window.showInformationMessage('当前位置未检测到代码字符串')
+        vscode.window.showInformationMessage('No code string detected at current position')
         return
       }
 
-      // 检查是否已存在该键值的编辑器
+      // Check if editor already exists for this key
       const hasExisting = editorProvider.hasExistingEditor(document.uri.fsPath, codeInfo.keyPath)
       if (hasExisting) {
         logger.info('Existing editor found, reusing without language selection')
-        // 直接复用已存在的编辑器，不需要语言选择
+        // Directly reuse existing editor, no need for language selection
         await editorProvider.openCodeEditor(codeInfo, document)
         return
       }
 
-      // 显示语言选择菜单，传递字段名和代码内容用于自动检测
+      // Show language selection menu, pass field name and code content for auto-detection
       const selectedLanguage = await LanguageSelector.showLanguageSelector(codeInfo.fieldName, codeInfo.code)
       if (!selectedLanguage) {
         logger.info('User cancelled language selection')
@@ -71,18 +71,18 @@ export function activate(context: vscode.ExtensionContext) {
 
       logger.info(`User selected language: ${selectedLanguage}`)
 
-      // 创建带有语言信息的代码块信息
+      // Create code block info with language information
       const codeInfoWithLanguage = {
         ...codeInfo,
         language: selectedLanguage,
       }
 
-      // 打开临时编辑器
+      // Open temporary editor
       await editorProvider.openCodeEditor(codeInfoWithLanguage, document)
     },
   )
 
-  // 注册范围编辑命令
+  // Register range edit command
   const editCodeAtRangeCommand = vscode.commands.registerCommand(
     'vscode-json-string-code-editor.editCodeAtRange',
     async (documentUri: string, blockInfo: any) => {
@@ -91,25 +91,25 @@ export function activate(context: vscode.ExtensionContext) {
         return
       }
 
-      // 检查文件是否应该被处理（包括文件类型和include配置）
+      // Check if file should be processed (including file type and include configuration)
       if (!shouldProcessFile(editor.document)) {
         return
       }
 
-      // blockInfo 已经是 CodeBlockInfo 格式，直接使用
+      // blockInfo is already in CodeBlockInfo format, use directly
       await editorProvider.openCodeEditor(blockInfo, editor.document)
     },
   )
 
-  // 注册清理临时文件命令
+  // Register cleanup temporary files command
   const cleanupTempFilesCommand = vscode.commands.registerCommand(
     'vscode-json-string-code-editor.cleanupTempFiles',
     async () => {
       try {
-        // 获取临时文件目录路径
+        // Get temporary file directory path
         const tmpDirUri = getTempDirectoryUri()
 
-        // 检查临时目录是否存在
+        // Check if temporary directory exists
         try {
           await vscode.workspace.fs.stat(tmpDirUri)
         }
@@ -118,7 +118,7 @@ export function activate(context: vscode.ExtensionContext) {
           return
         }
 
-        // 递归删除临时目录中的所有文件
+        // Recursively delete all files in temporary directory
         const deleteCount = await deleteTempFiles(tmpDirUri)
 
         logger.info(`Cleaned up ${deleteCount} temporary files`)
@@ -130,24 +130,24 @@ export function activate(context: vscode.ExtensionContext) {
     },
   )
 
-  // 清理临时文件的辅助函数
+  // Helper function to clean up temporary files
   async function deleteTempFiles(dirUri: vscode.Uri): Promise<number> {
     let deleteCount = 0
 
     try {
-      // 读取目录内容
+      // Read directory contents
       const entries = await vscode.workspace.fs.readDirectory(dirUri)
 
       for (const [name, type] of entries) {
         const entryUri = vscode.Uri.joinPath(dirUri, name)
 
         if (type === vscode.FileType.Directory) {
-          // 递归删除子目录
+          // Recursively delete subdirectories
           deleteCount += await deleteTempFiles(entryUri)
           await vscode.workspace.fs.delete(entryUri, { recursive: false })
         }
         else {
-          // 删除文件
+          // Delete file
           await vscode.workspace.fs.delete(entryUri)
           deleteCount++
         }
@@ -171,7 +171,7 @@ export function activate(context: vscode.ExtensionContext) {
 }
 
 export function deactivate() {
-  // 清理日志服务
+  // Clean up logging service
   logger.dispose()
   logger.info('JSON String Code Editor extension deactivated')
 }

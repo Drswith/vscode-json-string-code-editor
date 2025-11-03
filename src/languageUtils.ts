@@ -1,5 +1,5 @@
 /**
- * 语言到文件扩展名的映射
+ * Language to file extension mapping
  */
 const LANGUAGE_EXTENSION_MAP: Record<string, string> = {
   javascript: 'js',
@@ -28,9 +28,9 @@ const LANGUAGE_EXTENSION_MAP: Record<string, string> = {
 }
 
 /**
- * 根据语言ID获取对应的文件扩展名
- * @param languageId 语言标识符
- * @returns 文件扩展名，如果未找到则返回'txt'
+ * Get corresponding file extension based on language ID
+ * @param languageId Language identifier
+ * @returns File extension, returns 'txt' if not found
  */
 export function getFileExtensionForLanguage(languageId: string): string {
   const normalizedLanguageId = languageId.toLowerCase().trim()
@@ -38,9 +38,9 @@ export function getFileExtensionForLanguage(languageId: string): string {
 }
 
 /**
- * 标准化语言标识符
- * @param languageId 原始语言标识符
- * @returns 标准化后的语言标识符
+ * Normalize language identifier
+ * @param languageId Original language identifier
+ * @returns Normalized language identifier
  */
 export function normalizeLanguageId(languageId: string): string {
   if (!languageId || typeof languageId !== 'string') {
@@ -49,7 +49,7 @@ export function normalizeLanguageId(languageId: string): string {
 
   const normalized = languageId.toLowerCase().trim()
 
-  // 常见别名映射
+  // Common alias mapping
   const aliasMap: Record<string, string> = {
     'js': 'javascript',
     'ts': 'typescript',
