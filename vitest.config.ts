@@ -3,6 +3,7 @@ import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
   test: {
+    environment: 'node',
     setupFiles: ['./test/setup.ts'],
     alias: {
       vscode: resolve(__dirname, './mock/vscode.ts'),
