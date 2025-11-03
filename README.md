@@ -41,6 +41,26 @@ code --install-extension drswith.vscode-json-string-code-editor
 
 ## 🚀 Usage
 
+### Quick Start
+
+**Three simple steps to get started:**
+
+1. **📁 Open a JSON file** with code strings like:
+
+   ```json
+   {
+     "script": "function hello() {\n  console.log('Hello World!');\n}"
+   }
+   ```
+
+2. **🖱️ Right-click** on the string value (not the field name)
+   - Select "Edit Code in Temporary Editor"
+
+3. **✏️ Start editing** with full language support
+   - Choose from auto-detected languages
+   - Edit in a new tab with syntax highlighting
+   - Press `Ctrl+S` to save and sync back
+
 ### Basic Usage
 
 1. **Open a JSON or JSONC file** containing code strings
