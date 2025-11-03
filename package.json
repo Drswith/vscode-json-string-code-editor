@@ -93,14 +93,6 @@
           ],
           "description": "Glob patterns for files that should be excluded from processing"
         },
-        "vscode-json-string-code-editor.recentLanguages": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "default": [],
-          "description": "Recently used programming languages for code editing"
-        },
         "vscode-json-string-code-editor.logLevel": {
           "type": "string",
           "enum": [
@@ -142,6 +134,7 @@
     "release:pages": "pnpm run update && node scripts/release-pages.mjs"
   },
   "dependencies": {
+    "globby": "^15.0.0",
     "jsesc-es": "^0.0.3",
     "jsonc-parser": "^3.3.1"
   },
