@@ -48,31 +48,45 @@ export class CodeDetector {
     let result: CodeBlockInfo | null = null
     let currentProperty: string | null = null
     const pathStack: string[] = [] // Used to track JSON path
+    let currentDepth = 0 // Track object nesting depth
+    let arrayDepth = 0 // Track array nesting depth
     const pendingDetections: Array<{ fieldName: string, value: string, valueOffset: number, valueLength: number, fullPath: string }> = []
 
     const visitor: JSONVisitor = {
       onObjectBegin: () => {
-        // Reset when entering object
+        currentDepth++
       },
       onObjectProperty: (property: string) => {
+        // When encountering a new property at the same object level,
+        // need to pop the previous property first
+        // The target depth for properties should be currentDepth - 1 + arrayDepth
+        const targetStackLength = currentDepth - 1 + arrayDepth
+        while (pathStack.length > targetStackLength) {
+          pathStack.pop()
+        }
         currentProperty = property
         pathStack.push(property)
       },
       onObjectEnd: () => {
-        // Pop path stack when exiting object
+        // Pop the last property when exiting object
         if (pathStack.length > 0) {
           pathStack.pop()
         }
+        currentDepth--
         currentProperty = null
       },
       onArrayBegin: () => {
-        // Enter array
+        // Track array index in path
+        arrayDepth++
+        // Push array index marker
+        pathStack.push(`[${0}]`)
       },
       onArrayEnd: () => {
         // Clean up array indices in path stack when exiting array
         while (pathStack.length > 0 && pathStack[pathStack.length - 1].startsWith('[')) {
           pathStack.pop()
         }
+        arrayDepth--
       },
       onLiteralValue: (value: any, valueOffset: number, valueLength: number) => {
         if (typeof value === 'string' && currentProperty && this.isCodeField(currentProperty)) {
@@ -84,6 +98,17 @@ export class CodeDetector {
             valueLength,
             fullPath,
           })
+        }
+      },
+      onSeparator: (sep: string) => {
+        // Track array element separators to update array index
+        if (sep === ',' && arrayDepth > 0 && pathStack.length > 0) {
+          const lastItem = pathStack[pathStack.length - 1]
+          if (lastItem.startsWith('[')) {
+            // Increment array index
+            const currentIndex = Number.parseInt(lastItem.slice(1, -1), 10)
+            pathStack[pathStack.length - 1] = `[${currentIndex + 1}]`
+          }
         }
       },
     }

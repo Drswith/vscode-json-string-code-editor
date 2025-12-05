@@ -104,4 +104,33 @@ describe('right click code detection', () => {
     expect(result).not.toBeNull()
     expect(result?.fieldName).toBe('script')
   })
+
+  it('should generate correct keyPath for multiple properties in same object', async () => {
+    const uri = Uri.joinPath(Uri.file(process.cwd()), 'examples/test-right-click.json')
+    const document = await workspace.openTextDocument(uri)
+
+    // Position cursor inside the "second" field in multipleProperties object
+    // Line 16: "second": "const y = 2;",
+    const position = new Position(15, 18)
+    const result = await detector.detectCodeAtPosition(document, position)
+
+    expect(result).not.toBeNull()
+    expect(result?.fieldName).toBe('second')
+    // Bug fix: keyPath should be "multipleProperties.second", not "multipleProperties.first.second"
+    expect(result?.keyPath).toBe('multipleProperties.second')
+  })
+
+  it('should generate correct keyPath for sibling properties at root level', async () => {
+    const uri = Uri.joinPath(Uri.file(process.cwd()), 'examples/test-keypath-siblings.json')
+    const document = await workspace.openTextDocument(uri)
+
+    // Position cursor inside the "body" field
+    const position = new Position(2, 15)
+    const result = await detector.detectCodeAtPosition(document, position)
+
+    expect(result).not.toBeNull()
+    expect(result?.fieldName).toBe('body')
+    // Bug fix: keyPath should be "body", not "page.body"
+    expect(result?.keyPath).toBe('body')
+  })
 })

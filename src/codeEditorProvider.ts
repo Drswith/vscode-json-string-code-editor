@@ -317,23 +317,76 @@ export class CodeEditorProvider {
 
   /**
    * Update value in JSON object based on path
+   * Supports both object properties and array indices (e.g., "items.[0].name")
    */
   private updateJsonValueByPath(obj: any, keyPath: string, newValue: string): void {
-    const keys = keyPath.split('.')
+    // Parse keyPath to handle both object properties and array indices
+    // e.g., "config.items.[0].name" -> ["config", "items", "[0]", "name"]
+    const keys = this.parseKeyPath(keyPath)
     let current = obj
 
     // Navigate to target object
     for (let i = 0; i < keys.length - 1; i++) {
       const key = keys[i]
-      if (current[key] === undefined) {
-        current[key] = {}
+      const parsedKey = this.parseArrayIndex(key)
+
+      if (parsedKey.isArray) {
+        // Access array element
+        if (!Array.isArray(current)) {
+          throw new TypeError(`Expected array at path, but got ${typeof current}`)
+        }
+        current = current[parsedKey.index!]
       }
-      current = current[key]
+      else {
+        // Access object property
+        if (current[parsedKey.key] === undefined) {
+          current[parsedKey.key] = {}
+        }
+        current = current[parsedKey.key]
+      }
     }
 
     // Set final value
     const finalKey = keys[keys.length - 1]
-    current[finalKey] = newValue
+    const parsedFinalKey = this.parseArrayIndex(finalKey)
+
+    if (parsedFinalKey.isArray) {
+      if (!Array.isArray(current)) {
+        throw new TypeError(`Expected array at final path, but got ${typeof current}`)
+      }
+      current[parsedFinalKey.index!] = newValue
+    }
+    else {
+      current[parsedFinalKey.key] = newValue
+    }
+  }
+
+  /**
+   * Parse keyPath string into array of keys
+   * Handles both dot notation and array indices
+   */
+  private parseKeyPath(keyPath: string): string[] {
+    // Split by dots, but keep array indices intact
+    // e.g., "config.items.[0].name" -> ["config", "items", "[0]", "name"]
+    return keyPath.split('.').filter(key => key.length > 0)
+  }
+
+  /**
+   * Parse a key to determine if it's an array index
+   */
+  private parseArrayIndex(key: string): { isArray: boolean, index?: number, key: string } {
+    const arrayMatch = key.match(/^\[(\d+)\]$/)
+    if (arrayMatch) {
+      return {
+        isArray: true,
+        index: Number.parseInt(arrayMatch[1], 10),
+        key,
+      }
+    }
+    return {
+      isArray: false,
+      key,
+    }
   }
 
   /**
