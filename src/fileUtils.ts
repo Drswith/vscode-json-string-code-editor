@@ -1,5 +1,3 @@
-import * as path from 'node:path'
-import { globbySync, isGitIgnoredSync } from 'globby'
 import * as vscode from 'vscode'
 
 /**
@@ -11,7 +9,25 @@ function getDefaultIncludePatterns(): string[] {
 }
 
 /**
+ * Fast pattern matching using VS Code's built-in DocumentSelector
+ * This avoids loading globby for simple pattern matches
+ */
+function matchPatternWithVSCode(pattern: string, document: vscode.TextDocument, workspaceFolder?: vscode.WorkspaceFolder): boolean {
+  try {
+    const documentSelector: vscode.DocumentSelector = workspaceFolder
+      ? { pattern: new vscode.RelativePattern(workspaceFolder, pattern) }
+      : { pattern }
+    return vscode.languages.match(documentSelector, document) > 0
+  }
+  catch (error) {
+    console.warn(`Invalid pattern: ${pattern}`, error)
+    return false
+  }
+}
+
+/**
  * Check if file matches include configuration patterns
+ * Uses VS Code's built-in DocumentSelector for optimal performance
  * @param document Document to check
  * @returns Returns true if file matches include patterns, otherwise false
  */
@@ -27,51 +43,9 @@ export function isFileIncluded(document: vscode.TextDocument): boolean {
 
   // Get workspace folder
   const workspaceFolder = vscode.workspace.getWorkspaceFolder(document.uri)
-  if (!workspaceFolder) {
-    // If no workspace, use VS Code built-in matching functionality
-    return includePatterns.some((pattern) => {
-      try {
-        const documentSelector: vscode.DocumentSelector = { pattern }
-        return vscode.languages.match(documentSelector, document) > 0
-      }
-      catch (error) {
-        console.warn(`Invalid include pattern: ${pattern}`, error)
-        return false
-      }
-    })
-  }
 
-  try {
-    // Get file path relative to workspace
-    const relativePath = path.relative(workspaceFolder.uri.fsPath, document.uri.fsPath)
-
-    // Use globby for pattern matching, also considering .gitignore files
-    const matchedFiles = globbySync(includePatterns, {
-      cwd: workspaceFolder.uri.fsPath,
-      gitignore: true, // Automatically read and apply .gitignore rules
-      absolute: false,
-      onlyFiles: true,
-    })
-
-    // Check if current file is in the matched file list
-    return matchedFiles.includes(relativePath) || matchedFiles.includes(relativePath.replace(/\\/g, '/'))
-  }
-  catch (error) {
-    console.warn('Error matching include patterns with globby:', error)
-    // If globby fails, fallback to VS Code built-in matching
-    return includePatterns.some((pattern) => {
-      try {
-        const documentSelector: vscode.DocumentSelector = {
-          pattern: new vscode.RelativePattern(workspaceFolder, pattern),
-        }
-        return vscode.languages.match(documentSelector, document) > 0
-      }
-      catch (error) {
-        console.warn(`Invalid include pattern: ${pattern}`, error)
-        return false
-      }
-    })
-  }
+  // Use VS Code's built-in pattern matching (faster, no external dependency)
+  return includePatterns.some(pattern => matchPatternWithVSCode(pattern, document, workspaceFolder))
 }
 
 /**
@@ -90,73 +64,9 @@ export function isFileExcluded(document: vscode.TextDocument): boolean {
 
   // Get workspace folder
   const workspaceFolder = vscode.workspace.getWorkspaceFolder(document.uri)
-  if (!workspaceFolder) {
-    // If no workspace, use VS Code built-in matching functionality
-    return excludePatterns.some((pattern) => {
-      try {
-        const documentSelector: vscode.DocumentSelector = { pattern }
-        return vscode.languages.match(documentSelector, document) > 0
-      }
-      catch (error) {
-        console.warn(`Invalid exclude pattern: ${pattern}`, error)
-        return false
-      }
-    })
-  }
 
-  try {
-    // Get file path relative to workspace
-    const relativePath = path.relative(workspaceFolder.uri.fsPath, document.uri.fsPath)
-
-    // Use globby for pattern matching
-    const matchedFiles = globbySync(excludePatterns, {
-      cwd: workspaceFolder.uri.fsPath,
-      absolute: false,
-      onlyFiles: true,
-    })
-
-    // Check if current file is in the matched file list
-    return matchedFiles.includes(relativePath) || matchedFiles.includes(relativePath.replace(/\\/g, '/'))
-  }
-  catch (error) {
-    console.warn('Error matching exclude patterns with globby:', error)
-    // If globby fails, fallback to VS Code built-in matching
-    return excludePatterns.some((pattern) => {
-      try {
-        const documentSelector: vscode.DocumentSelector = {
-          pattern: new vscode.RelativePattern(workspaceFolder, pattern),
-        }
-        return vscode.languages.match(documentSelector, document) > 0
-      }
-      catch (error) {
-        console.warn(`Invalid exclude pattern: ${pattern}`, error)
-        return false
-      }
-    })
-  }
-}
-
-/**
- * Check if file is ignored by .gitignore
- * @param document Document to check
- * @returns Returns true if file is ignored by .gitignore, otherwise false
- */
-export function isFileGitIgnored(document: vscode.TextDocument): boolean {
-  const workspaceFolder = vscode.workspace.getWorkspaceFolder(document.uri)
-  if (!workspaceFolder) {
-    return false
-  }
-
-  try {
-    // Use globby's isGitIgnoredSync function to check if file is ignored by .gitignore
-    const isIgnored = isGitIgnoredSync({ cwd: workspaceFolder.uri.fsPath })
-    const relativePath = path.relative(workspaceFolder.uri.fsPath, document.uri.fsPath)
-    return isIgnored(relativePath)
-  }
-  catch (error) {
-    console.warn('Error checking .gitignore status:', error)
-    return false
-  }
+  // Use VS Code's built-in pattern matching (faster, no external dependency)
+  return excludePatterns.some(pattern => matchPatternWithVSCode(pattern, document, workspaceFolder))
 }
 
 /**
@@ -180,9 +90,6 @@ export function shouldProcessFile(document: vscode.TextDocument): boolean {
   if (!isFileIncluded(document)) {
     return false
   }
-
-  // Note: We don't check .gitignore status here because globby in isFileIncluded
-  // already handles .gitignore rules automatically through the gitignore: true option
 
   return true
 }

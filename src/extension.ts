@@ -1,34 +1,89 @@
 import * as os from 'node:os'
 import * as vscode from 'vscode'
-import { CodeDetector } from './codeDetector'
-import { CodeEditorProvider } from './codeEditorProvider'
-import { shouldProcessFile } from './fileUtils'
-import { LanguageSelector } from './languageSelector'
 import { logger } from './logger'
 import { getTempDirectoryUri } from './tempUtils'
+
+// Lazy-loaded modules to improve activation time
+let CodeDetector: typeof import('./codeDetector').CodeDetector
+let CodeEditorProvider: typeof import('./codeEditorProvider').CodeEditorProvider
+let LanguageSelector: typeof import('./languageSelector').LanguageSelector
+let shouldProcessFile: typeof import('./fileUtils').shouldProcessFile
+
+// Lazy-initialized instances
+let detector: InstanceType<typeof CodeDetector> | null = null
+let editorProvider: InstanceType<typeof CodeEditorProvider> | null = null
+
+/**
+ * Lazily load and initialize CodeDetector
+ */
+async function getDetector() {
+  if (!detector) {
+    if (!CodeDetector) {
+      const module = await import('./codeDetector')
+      CodeDetector = module.CodeDetector
+    }
+    detector = new CodeDetector()
+  }
+  return detector
+}
+
+/**
+ * Lazily load and initialize CodeEditorProvider
+ */
+async function getEditorProvider() {
+  if (!editorProvider) {
+    if (!CodeEditorProvider) {
+      const module = await import('./codeEditorProvider')
+      CodeEditorProvider = module.CodeEditorProvider
+    }
+    editorProvider = new CodeEditorProvider()
+  }
+  return editorProvider
+}
+
+/**
+ * Lazily load LanguageSelector
+ */
+async function getLanguageSelector() {
+  if (!LanguageSelector) {
+    const module = await import('./languageSelector')
+    LanguageSelector = module.LanguageSelector
+  }
+  return LanguageSelector
+}
+
+/**
+ * Lazily load shouldProcessFile
+ */
+async function getShouldProcessFile() {
+  if (!shouldProcessFile) {
+    const module = await import('./fileUtils')
+    shouldProcessFile = module.shouldProcessFile
+  }
+  return shouldProcessFile
+}
 
 export function activate(context: vscode.ExtensionContext) {
   logger.info('JSON String Code Editor extension is being activated')
 
-  const detector = new CodeDetector()
-
-  // Listen for configuration changes
+  // Listen for configuration changes (lightweight, no lazy loading needed)
   const configChangeListener = vscode.workspace.onDidChangeConfiguration((e: vscode.ConfigurationChangeEvent) => {
     if (e.affectsConfiguration('vscode-json-string-code-editor')) {
       logger.onConfigurationChanged()
     }
   })
 
-  const editorProvider = new CodeEditorProvider()
-
   // Listen for document save events to sync temporary file changes to original JSON file
+  // Only initialize editorProvider when actually needed
   const saveListener = vscode.workspace.onDidSaveTextDocument(async (document) => {
-    // Check if it's a temporary file
-    if (document.uri.fsPath.includes('vscode-json-string-code-editor')
-      && document.uri.fsPath.includes(os.tmpdir())) {
-      logger.info(`Temporary file saved: ${document.uri.fsPath}`)
-      await editorProvider.saveCodeToOriginal(document)
+    // Quick check before lazy loading - avoid unnecessary imports
+    if (!document.uri.fsPath.includes('vscode-json-string-code-editor')
+      || !document.uri.fsPath.includes(os.tmpdir())) {
+      return
     }
+    logger.info(`Temporary file saved: ${document.uri.fsPath}`)
+    const provider = await getEditorProvider()
+    await provider.saveCodeToOriginal(document)
   })
 
   // Register command: edit code
@@ -45,8 +100,15 @@ export function activate(context: vscode.ExtensionContext) {
       const selection = editor.selection
       const position = selection.active
 
+      // Lazy load detector and editorProvider
+      const [currentDetector, currentEditorProvider, LangSelector] = await Promise.all([
+        getDetector(),
+        getEditorProvider(),
+        getLanguageSelector(),
+      ])
+
       // Detect if current position contains code
-      const codeInfo = await detector.detectCodeAtPosition(document, position)
+      const codeInfo = await currentDetector.detectCodeAtPosition(document, position)
       if (!codeInfo) {
         logger.info('No code detected at current position')
         vscode.window.showInformationMessage('No code string detected at current position')
@@ -54,16 +116,16 @@ export function activate(context: vscode.ExtensionContext) {
       }
 
       // Check if editor already exists for this key
-      const hasExisting = editorProvider.hasExistingEditor(document.uri.fsPath, codeInfo.keyPath)
+      const hasExisting = currentEditorProvider.hasExistingEditor(document.uri.fsPath, codeInfo.keyPath)
       if (hasExisting) {
         logger.info('Existing editor found, reusing without language selection')
         // Directly reuse existing editor, no need for language selection
-        await editorProvider.openCodeEditor(codeInfo, document)
+        await currentEditorProvider.openCodeEditor(codeInfo, document)
         return
       }
 
       // Show language selection menu, pass field name and code content for auto-detection
-      const selectedLanguage = await LanguageSelector.showLanguageSelector(codeInfo.fieldName, codeInfo.code)
+      const selectedLanguage = await LangSelector.showLanguageSelector(codeInfo.fieldName, codeInfo.code)
       if (!selectedLanguage) {
         logger.info('User cancelled language selection')
         return
@@ -78,7 +140,7 @@ export function activate(context: vscode.ExtensionContext) {
       }
 
       // Open temporary editor
-      await editorProvider.openCodeEditor(codeInfoWithLanguage, document)
+      await currentEditorProvider.openCodeEditor(codeInfoWithLanguage, document)
     },
   )
 
@@ -91,13 +153,19 @@ export function activate(context: vscode.ExtensionContext) {
         return
       }
 
+      // Lazy load shouldProcessFile
+      const processFileCheck = await getShouldProcessFile()
+
       // Check if file should be processed (including file type and include configuration)
-      if (!shouldProcessFile(editor.document)) {
+      if (!processFileCheck(editor.document)) {
         return
       }
 
+      // Lazy load editorProvider
+      const currentEditorProvider = await getEditorProvider()
+
       // blockInfo is already in CodeBlockInfo format, use directly
-      await editorProvider.openCodeEditor(blockInfo, editor.document)
+      await currentEditorProvider.openCodeEditor(blockInfo, editor.document)
     },
   )
 

@@ -35,13 +35,7 @@
   "engines": {
     "vscode": "^1.74.0"
   },
-  "activationEvents": [
-    "onLanguage:json",
-    "onLanguage:jsonc",
-    "onCommand:vscode-json-string-code-editor.editCode",
-    "onCommand:vscode-json-string-code-editor.editCodeAtRange",
-    "onCommand:vscode-json-string-code-editor.cleanupTempFiles"
-  ],
+  "activationEvents": [],
   "contributes": {
     "commands": [
       {
@@ -137,7 +131,6 @@
     "release:pages": "pnpm run update && node scripts/release-pages.mjs"
   },
   "dependencies": {
-    "globby": "^15.0.0",
     "jsesc-es": "^0.0.3",
     "jsonc-parser": "^3.3.1"
   },

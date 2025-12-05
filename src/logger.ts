@@ -7,14 +7,28 @@ export enum LogLevel {
   DEBUG = 3,
 }
 
+/**
+ * Lazy-initialized logger with deferred OutputChannel creation
+ * Only creates OutputChannel when actually needed (first log call)
+ */
 export class Logger {
   private static instance: Logger
-  private outputChannel: vscode.OutputChannel
+  private _outputChannel: vscode.OutputChannel | null = null
   private logLevel: LogLevel = LogLevel.INFO
+  private logLevelInitialized = false
 
   private constructor() {
-    this.outputChannel = vscode.window.createOutputChannel('JSON String Code Editor')
-    this.updateLogLevel()
+    // Intentionally empty - lazy initialization
+  }
+
+  /**
+   * Get OutputChannel lazily - only created on first use
+   */
+  private get outputChannel(): vscode.OutputChannel {
+    if (!this._outputChannel) {
+      this._outputChannel = vscode.window.createOutputChannel('JSON String Code Editor')
+    }
+    return this._outputChannel
   }
 
   public static getInstance(): Logger {
@@ -22,6 +36,17 @@ export class Logger {
       Logger.instance = new Logger()
     }
     return Logger.instance
+  }
+
+  /**
+   * Update log level lazily - only reads config when needed
+   */
+  private ensureLogLevelInitialized(): void {
+    if (this.logLevelInitialized) {
+      return
+    }
+    this.updateLogLevel()
+    this.logLevelInitialized = true
   }
 
   private updateLogLevel(): void {
@@ -47,6 +72,7 @@ export class Logger {
   }
 
   private shouldLog(level: LogLevel): boolean {
+    this.ensureLogLevelInitialized()
     return level <= this.logLevel
   }
 
@@ -72,7 +98,7 @@ export class Logger {
     const levelStr = LogLevel[level]
     const logMessage = `[${timestamp}] [${levelStr}] ${message}`
 
-    // 1. Output to Output Channel
+    // 1. Output to Output Channel (lazy creation)
     this.outputChannel.appendLine(logMessage)
 
     // 2. Output to Console
@@ -125,14 +151,18 @@ export class Logger {
   }
 
   public dispose(): void {
-    this.outputChannel.dispose()
+    if (this._outputChannel) {
+      this._outputChannel.dispose()
+      this._outputChannel = null
+    }
   }
 
   // Listen for configuration changes
   public onConfigurationChanged(): void {
     this.updateLogLevel()
+    this.logLevelInitialized = true
   }
 }
 
-// Export singleton instance
+// Export lazy singleton - Logger instance created but OutputChannel deferred
 export const logger = Logger.getInstance()
