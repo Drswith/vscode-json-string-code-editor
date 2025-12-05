@@ -1,4 +1,5 @@
 import type { CodeBlockInfo } from './codeDetector'
+import * as crypto from 'node:crypto'
 import * as fs from 'node:fs'
 import * as os from 'node:os'
 import * as path from 'node:path'
@@ -11,6 +12,7 @@ interface EditorInfo {
   originalCode: string
   codeBlockInfo: CodeBlockInfo
   uniqueKey: string // Unique key: filename + JSON key path
+  safeFileName: string // Safe short filename for temp file
 }
 
 export class CodeEditorProvider {
@@ -23,6 +25,25 @@ export class CodeEditorProvider {
   private generateUniqueKey(filePath: string, keyPath: string): string {
     const fileName = vscode.workspace.asRelativePath(filePath)
     return `${fileName}::${keyPath}`
+  }
+
+  /**
+   * Generate safe short filename for temp file
+   * Uses hash to ensure uniqueness while keeping filename short
+   */
+  private generateSafeFileName(uniqueKey: string, keyPath: string): string {
+    // Get the last part of the key path (field name)
+    const parts = keyPath.split('.')
+    const lastPart = parts[parts.length - 1] || 'code'
+
+    // Create a short hash of the uniqueKey for uniqueness
+    const hash = crypto.createHash('md5').update(uniqueKey).digest('hex').substring(0, 8)
+
+    // Sanitize the last part (only keep alphanumeric and underscore)
+    const safePart = lastPart.replace(/\W/g, '_').substring(0, 30)
+
+    // Return a safe filename: fieldName_hash (max ~40 chars)
+    return `${safePart}_${hash}`
   }
 
   /**
@@ -81,9 +102,9 @@ export class CodeEditorProvider {
 
     // Create real temporary file instead of untitled document
     const tempDir = os.tmpdir()
-    // Use uniqueKey to generate filename, ensuring same key value uses same temporary file
-    const safeUniqueKey = uniqueKey.replace(/\W/g, '_')
-    const tempFileName = `${safeUniqueKey}.${fileExtension}`
+    // Generate safe short filename to avoid ENAMETOOLONG error
+    const safeFileName = this.generateSafeFileName(uniqueKey, codeBlockInfo.keyPath)
+    const tempFileName = `${safeFileName}.${fileExtension}`
     const tempFilePath = path.join(tempDir, 'vscode-json-string-code-editor', tempFileName)
 
     // Ensure temporary directory exists
@@ -109,6 +130,7 @@ export class CodeEditorProvider {
       originalCode: codeBlockInfo.code,
       codeBlockInfo,
       uniqueKey,
+      safeFileName,
     }
 
     // Store editor information
@@ -220,16 +242,15 @@ export class CodeEditorProvider {
    * Save code to original document
    */
   async saveCodeToOriginal(tempDocument: vscode.TextDocument): Promise<void> {
-    // Extract unique key from temporary file path
+    // Extract filename from temporary file path
     const tempFilePath = tempDocument.uri.fsPath
     const tempFileNameWithExt = path.basename(tempFilePath)
     const tempFileName = path.parse(tempFileNameWithExt).name
 
-    // Find corresponding editor info
+    // Find corresponding editor info by safeFileName
     let targetEditorInfo: EditorInfo | null = null
-    for (const [uniqueKey, editorInfo] of this.activeEditors.entries()) {
-      const safeUniqueKey = uniqueKey.replace(/\W/g, '_')
-      if (tempFileName === safeUniqueKey) {
+    for (const editorInfo of this.activeEditors.values()) {
+      if (tempFileName === editorInfo.safeFileName) {
         targetEditorInfo = editorInfo
         break
       }
