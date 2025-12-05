@@ -2,7 +2,7 @@
   "publisher": "drswith",
   "name": "vscode-json-string-code-editor",
   "displayName": "JSON String Code Editor",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "packageManager": "pnpm@9.15.9",
   "description": "Enhanced JSON schema code snippet editing experience with temporary code editor tabs",
   "author": "Drswith",
