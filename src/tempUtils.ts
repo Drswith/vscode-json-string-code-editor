@@ -19,24 +19,20 @@ export function getTempDirectoryUri(): vscode.Uri {
 }
 
 /**
- * Normalize a file system path for comparison
- * Unifies separators and ignores case, because on Windows `vscode.Uri.fsPath`
- * lowercases the drive letter while `os.tmpdir()` keeps it as is
- * @param fsPath File system path
- * @returns Normalized path
- */
-export function normalizePathForComparison(fsPath: string): string {
-  return fsPath.replace(/\\/g, '/').replace(/\/+$/, '').toLowerCase()
-}
-
-/**
  * Check if a file is located inside the given directory
+ * `path.relative` handles mixed separators and, on Windows, compares case-insensitively
+ * (`vscode.Uri.fsPath` lowercases the drive letter while `os.tmpdir()` keeps it as is)
  * @param filePath File system path of the file
  * @param dirPath File system path of the directory
+ * @param pathImpl Platform path implementation, defaults to the current platform
  * @returns Whether the file is inside the directory
  */
-export function isPathInsideDirectory(filePath: string, dirPath: string): boolean {
-  return normalizePathForComparison(filePath).startsWith(`${normalizePathForComparison(dirPath)}/`)
+export function isPathInsideDirectory(filePath: string, dirPath: string, pathImpl: path.PlatformPath = path): boolean {
+  const relativePath = pathImpl.relative(dirPath, filePath)
+  return relativePath !== ''
+    && relativePath !== '..'
+    && !relativePath.startsWith(`..${pathImpl.sep}`)
+    && !pathImpl.isAbsolute(relativePath)
 }
 
 /**
