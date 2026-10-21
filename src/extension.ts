@@ -1,7 +1,6 @@
-import * as os from 'node:os'
 import * as vscode from 'vscode'
 import { logger } from './logger'
-import { getTempDirectoryUri } from './tempUtils'
+import { getTempDirectoryUri, isTempFile } from './tempUtils'
 
 // Lazy-loaded modules to improve activation time
 let CodeDetector: typeof import('./codeDetector').CodeDetector
@@ -77,8 +76,7 @@ export function activate(context: vscode.ExtensionContext) {
   // Only initialize editorProvider when actually needed
   const saveListener = vscode.workspace.onDidSaveTextDocument(async (document) => {
     // Quick check before lazy loading - avoid unnecessary imports
-    if (!document.uri.fsPath.includes('vscode-json-string-code-editor')
-      || !document.uri.fsPath.includes(os.tmpdir())) {
+    if (!isTempFile(document.uri.fsPath)) {
       return
     }
     logger.info(`Temporary file saved: ${document.uri.fsPath}`)
