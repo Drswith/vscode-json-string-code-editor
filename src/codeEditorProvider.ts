@@ -1,16 +1,17 @@
 import type { CodeBlockInfo } from './codeDetector'
 import * as crypto from 'node:crypto'
 import * as fs from 'node:fs'
-import * as os from 'node:os'
 import * as path from 'node:path'
 import * as vscode from 'vscode'
 import { getFileExtensionForLanguage, normalizeLanguageId } from './languageUtils'
+import { getTempDirectoryPath } from './tempUtils'
 
 interface EditorInfo {
   document: vscode.TextDocument
   editor: vscode.TextEditor
   originalCode: string
   codeBlockInfo: CodeBlockInfo
+  originalUri: vscode.Uri // URI of the original JSON document
   uniqueKey: string // Unique key: filename + JSON key path
   safeFileName: string // Safe short filename for temp file
 }
@@ -101,11 +102,10 @@ export class CodeEditorProvider {
     const fileExtension = getFileExtensionForLanguage(normalizedLanguage)
 
     // Create real temporary file instead of untitled document
-    const tempDir = os.tmpdir()
     // Generate safe short filename to avoid ENAMETOOLONG error
     const safeFileName = this.generateSafeFileName(uniqueKey, codeBlockInfo.keyPath)
     const tempFileName = `${safeFileName}.${fileExtension}`
-    const tempFilePath = path.join(tempDir, 'vscode-json-string-code-editor', tempFileName)
+    const tempFilePath = path.join(getTempDirectoryPath(), tempFileName)
 
     // Ensure temporary directory exists
     const tempDirPath = path.dirname(tempFilePath)
@@ -129,6 +129,7 @@ export class CodeEditorProvider {
       editor,
       originalCode: codeBlockInfo.code,
       codeBlockInfo,
+      originalUri: originalDocument.uri,
       uniqueKey,
       safeFileName,
     }
@@ -264,13 +265,10 @@ export class CodeEditorProvider {
     const newCode = tempDocument.getText()
     const { codeBlockInfo } = targetEditorInfo
 
-    // Find original document
-    const workspaceFolder = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath
-    const relativePath = targetEditorInfo.uniqueKey.split('::')[0]
-    const fullPath = workspaceFolder ? `${workspaceFolder}/${relativePath}` : relativePath
-
+    // Find original document by its URI, which is platform-independent
+    const originalUri = targetEditorInfo.originalUri.toString()
     const originalDocument = vscode.workspace.textDocuments.find(doc =>
-      doc.uri.fsPath === fullPath,
+      doc.uri.toString() === originalUri,
     )
 
     if (!originalDocument) {
